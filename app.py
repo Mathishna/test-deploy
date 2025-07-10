@@ -1,10 +1,10 @@
-from flask import Flask, render_template, request
+from flask import Flask, request, render_template
 import os
 import fitz  # PyMuPDF
 import openai
 
 app = Flask(__name__)
-openai.api_key = os.getenv("OPENAI_API_KEY")  # Set this in your Render environment
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 def extract_text_from_pdf(pdf_path):
     text = ""
@@ -14,32 +14,55 @@ def extract_text_from_pdf(pdf_path):
     return text
 
 def summarize_text(text):
-    client = openai.OpenAI()  # use latest OpenAI SDK
-    response = client.chat.completions.create(
-        model="gpt-4o",
-        messages=[
-            {
-                "role": "system",
-                "content": "You are a real estate analyst. Summarize this real estate offering memo with bullet points including asset type, location, tenants, rent roll, lease details, pricing, and investment highlights."
-            },
-            {"role": "user", "content": text}
-        ],
-        temperature=0.3,
-        max_tokens=800
-    )
-    return response.choices[0].message.content
+    try:
+        response = openai.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": (
+                    "You are a real estate investment analyst. Format the output strictly in this structure: \n\n"
+                    "Intro Summary\n"
+                    "\nProperty Overview\n"
+                    "- Location\n"
+                    "- Total RSF\n"
+                    "- Year Built / Renovated\n"
+                    "- Zoning\n"
+                    "- Stories\n"
+                    "- Parking\n"
+                    "- Ceiling Heights\n"
+                    "- Amenities\n"
+                    "- Notable\n"
+                    "\nTenant / Lease Summary\n"
+                    "- Major Tenants with RSF, Lease Expiry Date, Rent PSF\n"
+                    "- Total Occupancy\n"
+                    "- WALT\n"
+                    "- Annual Rental Revenue\n"
+                    "- Rent Type\n"
+                    "- Rent Bumps\n"
+                    "- Renewal Options\n"
+                    "\nOwnership\n"
+                    "- Ownership Structure\n"
+                    "- Capital Improvements\n"
+                    "- Ownership History\n"
+                    "\nPricing Guidance\n"
+                    "- Include if available"
+                )},
+                {"role": "user", "content": text}
+            ],
+            temperature=0.3,
+            max_tokens=1200
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        return f"Error summarizing:\n{e}"
 
 @app.route("/", methods=["GET", "POST"])
 def index():
     if request.method == "POST":
-        pdf_file = request.files["pdf"]
+        pdf_file = request.files.get("pdf")
         if pdf_file:
-            pdf_path = os.path.join("/tmp", "uploaded.pdf")  # ✅ Required for Render
+            pdf_path = os.path.join("/tmp", "uploaded.pdf")
             pdf_file.save(pdf_path)
             raw_text = extract_text_from_pdf(pdf_path)
-            try:
-                summary = summarize_text(raw_text)
-            except Exception as e:
-                return f"<h1>Error summarizing:</h1><pre>{e}</pre>"
-            return f"<h1>Deal Summary:</h1><pre>{summary}</pre>"
+            summary = summarize_text(raw_text)
+            return render_template("result.html", summary=summary)
     return render_template("index.html")
