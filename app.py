@@ -20,7 +20,7 @@ export default function App() {
     formData.append("file", file);
 
     try {
-      const response = await axios.post("http://localhost:8000/upload", formData);
+      const response = await axios.post("https://first-try-deal-summary.onrender.com/upload", formData);
       setSummary(response.data.summary);
     } catch (error) {
       console.error("Upload failed", error);
@@ -145,3 +145,4 @@ async def upload_file(file: UploadFile = File(...)):
 
     except Exception as e:
         return {"summary": f"Error: {str(e)}"}
+
