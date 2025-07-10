@@ -17,8 +17,14 @@ def summarize_text(text):
     response = openai.ChatCompletion.create(
         model="gpt-4o",
         messages=[
-            {"role": "system", "content": "You are a real estate analyst. Summarize this real estate offering memo with bullet points including asset type, location, tenants, rent roll, lease details, pricing, and investment highlights."},
-            {"role": "user", "content": text}
+            {
+                "role": "system",
+                "content": "You are a real estate analyst. Summarize this real estate offering memo with bullet points including asset type, location, tenants, rent roll, lease details, pricing, and investment highlights."
+            },
+            {
+                "role": "user",
+                "content": text
+            }
         ],
         temperature=0.3,
         max_tokens=800
@@ -30,9 +36,12 @@ def index():
     if request.method == "POST":
         pdf_file = request.files["pdf"]
         if pdf_file:
-            pdf_path = os.path.join("uploaded.pdf")
+            pdf_path = os.path.join("/tmp", "uploaded.pdf")  # ✅ use /tmp for Render compatibility
             pdf_file.save(pdf_path)
             raw_text = extract_text_from_pdf(pdf_path)
-            summary = summarize_text(raw_text)
-            return f"<h1>Deal Summary:</h1><pre>{summary}</pre>"
+            try:
+                summary = summarize_text(raw_text)
+                return f"<h1>Deal Summary:</h1><pre>{summary}</pre>"
+            except Exception as e:
+                return f"<h1>Error summarizing:</h1><pre>{e}</pre>"  # ✅ show error on webpage
     return render_template("index.html")
